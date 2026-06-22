@@ -4,6 +4,10 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.time.format.ResolverStyle;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -11,6 +15,9 @@ import java.util.Map;
 
 public final class TaskList implements Runnable {
     private static final String QUIT = "quit";
+
+    private static final DateTimeFormatter DEADLINE_FORMATTER =
+            DateTimeFormatter.ofPattern("dd-MM-uuuu").withResolverStyle(ResolverStyle.STRICT);
 
     private final Map<String, List<Task>> tasks = new LinkedHashMap<>();
     private final BufferedReader in;
@@ -66,6 +73,13 @@ public final class TaskList implements Runnable {
             case "help":
                 help();
                 break;
+            case "deadline":
+                if (commandRest.length < 2) {
+                    out.println("Usage: deadline <task ID> <date>");
+                } else {
+                    deadline(commandRest[1]);
+                }
+                break;
             default:
                 error(command);
                 break;
@@ -116,17 +130,16 @@ public final class TaskList implements Runnable {
     }
 
     private void setDone(String idString, boolean done) {
-        int id = Integer.parseInt(idString);
-        for (Map.Entry<String, List<Task>> project : tasks.entrySet()) {
-            for (Task task : project.getValue()) {
-                if (task.getId() == id) {
-                    task.setDone(done);
-                    return;
-                }
-            }
+        long id = Long.parseLong(idString);
+        Task task = findTask(id);
+
+        if (task == null) {
+            out.printf("Could not find a task with an ID of %d.", id);
+            out.println();
+            return;
         }
-        out.printf("Could not find a task with an ID of %d.", id);
-        out.println();
+
+        task.setDone(done);
     }
 
     private void help() {
@@ -136,7 +149,55 @@ public final class TaskList implements Runnable {
         out.println("  add task <project name> <task description>");
         out.println("  check <task ID>");
         out.println("  uncheck <task ID>");
+        out.println("  deadline <task ID> <date>");
         out.println();
+    }
+
+    private void deadline(String commandLine) {
+        String[] taskDeadline = commandLine.split(" ", 2);
+
+        if (taskDeadline.length < 2) {
+            out.println("Usage: deadline <task ID> <date>");
+            return;
+        }
+
+        long id;
+        try {
+            id = Long.parseLong(taskDeadline[0]);
+        } catch (NumberFormatException e) {
+            out.printf("Invalid task ID \"%s\".", taskDeadline[0]);
+            out.println();
+            return;
+        }
+
+        LocalDate deadline;
+        try {
+            deadline = LocalDate.parse(taskDeadline[1], DEADLINE_FORMATTER);
+        } catch (DateTimeParseException e) {
+            out.printf("Invalid date \"%s\". Use dd-MM-yyyy.", taskDeadline[1]);
+            out.println();
+            return;
+        }
+
+        Task task = findTask(id);
+        if (task == null) {
+            out.printf("Could not find a task with an ID of %d.", id);
+            out.println();
+            return;
+        }
+
+        task.setDeadline(deadline);
+    }
+
+    private Task findTask(long id) {
+        for (List<Task> projectTasks : tasks.values()) {
+            for (Task task : projectTasks) {
+                if (task.getId() == id) {
+                    return task;
+                }
+            }
+        }
+        return null;
     }
 
     private void error(String command) {
