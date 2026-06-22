@@ -130,6 +130,32 @@ public final class ApplicationTest {
         execute("quit");
     }
 
+    @Test
+    void it_shows_tasks_grouped_by_deadline_in_chronological_order() throws IOException {
+        execute("add project secrets");
+        execute("add task secrets Eat more donuts.");
+        execute("add task secrets Refactor the codebase");
+
+        execute("add project training");
+        execute("add task training Interaction-Driven Design");
+
+        execute("deadline 1 13-11-2021");
+        execute("deadline 3 11-11-2021");
+
+        execute("view-by-deadline");
+
+        readLines(
+                "11-11-2021:",
+                "       3: Interaction-Driven Design",
+                "13-11-2021:",
+                "       1: Eat more donuts.",
+                "No deadline:",
+                "       2: Refactor the codebase"
+        );
+
+        execute("quit");
+    }
+
     private void execute(String command) throws IOException {
         read(PROMPT);
         write(command);
