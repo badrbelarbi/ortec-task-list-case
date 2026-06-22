@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 public final class TaskList implements Runnable {
     private static final String QUIT = "quit";
@@ -79,6 +80,9 @@ public final class TaskList implements Runnable {
                 } else {
                     deadline(commandRest[1]);
                 }
+                break;
+            case "view-by-deadline":
+                viewByDeadline();
                 break;
             default:
                 error(command);
@@ -150,6 +154,7 @@ public final class TaskList implements Runnable {
         out.println("  check <task ID>");
         out.println("  uncheck <task ID>");
         out.println("  deadline <task ID> <date>");
+        out.println("  view-by-deadline");
         out.println();
     }
 
@@ -198,6 +203,38 @@ public final class TaskList implements Runnable {
             }
         }
         return null;
+    }
+
+    private void viewByDeadline() {
+        Map<LocalDate, List<Task>> tasksByDeadline = new TreeMap<>();
+        List<Task> tasksWithoutDeadline = new ArrayList<>();
+
+        for (List<Task> projectTasks : tasks.values()) {
+            for (Task task : projectTasks) {
+                if (task.hasDeadline()) {
+                    tasksByDeadline
+                            .computeIfAbsent(task.getDeadline(), deadline -> new ArrayList<>())
+                            .add(task);
+                } else {
+                    tasksWithoutDeadline.add(task);
+                }
+            }
+        }
+
+        for (Map.Entry<LocalDate, List<Task>> deadlineGroup : tasksByDeadline.entrySet()) {
+            printDeadlineGroup(DEADLINE_FORMATTER.format(deadlineGroup.getKey()), deadlineGroup.getValue());
+        }
+
+        if (!tasksWithoutDeadline.isEmpty()) {
+            printDeadlineGroup("No deadline", tasksWithoutDeadline);
+        }
+    }
+
+    private void printDeadlineGroup(String title, List<Task> tasks) {
+        out.printf("%s:%n", title);
+        for (Task task : tasks) {
+            out.printf("       %d: %s%n", task.getId(), task.getDescription());
+        }
     }
 
     private void error(String command) {
