@@ -94,6 +94,41 @@ public final class ApplicationTest {
         execute("quit");
     }
 
+    @Test
+    void it_shows_the_deadline_command_in_help() throws IOException {
+        execute("help");
+
+        readLines(
+                "Commands:",
+                "  show",
+                "  add project <project name>",
+                "  add task <project name> <task description>",
+                "  check <task ID>",
+                "  uncheck <task ID>",
+                "  deadline <task ID> <date>",
+                ""
+        );
+
+        execute("quit");
+    }
+
+    @Test
+    void it_rejects_invalid_deadline_command_input() throws IOException {
+        execute("deadline");
+        readLines("Usage: deadline <task ID> <date>");
+
+        execute("deadline abc 25-11-2024");
+        readLines("Invalid task ID \"abc\".");
+
+        execute("deadline 1 invalid-date");
+        readLines("Invalid date \"invalid-date\". Use dd-MM-yyyy.");
+
+        execute("deadline 999 25-11-2024");
+        readLines("Could not find a task with an ID of 999.");
+
+        execute("quit");
+    }
+
     private void execute(String command) throws IOException {
         read(PROMPT);
         write(command);
