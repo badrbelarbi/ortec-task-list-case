@@ -8,11 +8,8 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.format.ResolverStyle;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 
 public final class TaskList implements Runnable {
     private static final String QUIT = "quit";
@@ -20,11 +17,9 @@ public final class TaskList implements Runnable {
     private static final DateTimeFormatter DEADLINE_FORMATTER =
             DateTimeFormatter.ofPattern("dd-MM-uuuu").withResolverStyle(ResolverStyle.STRICT);
 
-    private final Map<String, List<Task>> tasks = new LinkedHashMap<>();
+    private final TaskListService taskListService;
     private final BufferedReader in;
     private final PrintWriter out;
-
-    private long lastId = 0;
 
     public static void startConsole() {
         BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
@@ -33,24 +28,33 @@ public final class TaskList implements Runnable {
     }
 
     public TaskList(BufferedReader reader, PrintWriter writer) {
+        this(reader, writer, new TaskListService());
+    }
+
+    public TaskList(BufferedReader reader, PrintWriter writer, TaskListService taskListService) {
         this.in = reader;
         this.out = writer;
+        this.taskListService = taskListService;
     }
 
     public void run() {
         out.println("Welcome to TaskList! Type 'help' for available commands.");
+
         while (true) {
             out.print("> ");
             out.flush();
+
             String command;
             try {
                 command = in.readLine();
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
+
             if (command.equals(QUIT)) {
                 break;
             }
+
             execute(command);
         }
     }
@@ -58,6 +62,7 @@ public final class TaskList implements Runnable {
     private void execute(String commandLine) {
         String[] commandRest = commandLine.split(" ", 2);
         String command = commandRest[0];
+
         switch (command) {
             case "show":
                 show();
@@ -91,11 +96,18 @@ public final class TaskList implements Runnable {
     }
 
     private void show() {
-        for (Map.Entry<String, List<Task>> project : tasks.entrySet()) {
+        for (Map.Entry<String, List<Task>> project : taskListService.getProjects().entrySet()) {
             out.println(project.getKey());
+
             for (Task task : project.getValue()) {
-                out.printf("    [%c] %d: %s%n", (task.isDone() ? 'x' : ' '), task.getId(), task.getDescription());
+                out.printf(
+                        "    [%c] %d: %s%n",
+                        task.isDone() ? 'x' : ' ',
+                        task.getId(),
+                        task.getDescription()
+                );
             }
+
             out.println();
         }
     }
@@ -103,6 +115,7 @@ public final class TaskList implements Runnable {
     private void add(String commandLine) {
         String[] subcommandRest = commandLine.split(" ", 2);
         String subcommand = subcommandRest[0];
+
         if (subcommand.equals("project")) {
             addProject(subcommandRest[1]);
         } else if (subcommand.equals("task")) {
@@ -112,17 +125,16 @@ public final class TaskList implements Runnable {
     }
 
     private void addProject(String name) {
-        tasks.put(name, new ArrayList<Task>());
+        taskListService.addProject(name);
     }
 
     private void addTask(String project, String description) {
-        List<Task> projectTasks = tasks.get(project);
-        if (projectTasks == null) {
+        boolean added = taskListService.addTask(project, description);
+
+        if (!added) {
             out.printf("Could not find a project with the name \"%s\".", project);
             out.println();
-            return;
         }
-        projectTasks.add(new Task(nextId(), description, false));
     }
 
     private void check(String idString) {
@@ -135,27 +147,12 @@ public final class TaskList implements Runnable {
 
     private void setDone(String idString, boolean done) {
         long id = Long.parseLong(idString);
-        Task task = findTask(id);
+        boolean updated = taskListService.setDone(id, done);
 
-        if (task == null) {
+        if (!updated) {
             out.printf("Could not find a task with an ID of %d.", id);
             out.println();
-            return;
         }
-
-        task.setDone(done);
-    }
-
-    private void help() {
-        out.println("Commands:");
-        out.println("  show");
-        out.println("  add project <project name>");
-        out.println("  add task <project name> <task description>");
-        out.println("  check <task ID>");
-        out.println("  uncheck <task ID>");
-        out.println("  deadline <task ID> <date>");
-        out.println("  view-by-deadline");
-        out.println();
     }
 
     private void deadline(String commandLine) {
@@ -184,65 +181,51 @@ public final class TaskList implements Runnable {
             return;
         }
 
-        Task task = findTask(id);
-        if (task == null) {
+        boolean updated = taskListService.setDeadline(id, deadline);
+
+        if (!updated) {
             out.printf("Could not find a task with an ID of %d.", id);
             out.println();
-            return;
         }
-
-        task.setDeadline(deadline);
-    }
-
-    private Task findTask(long id) {
-        for (List<Task> projectTasks : tasks.values()) {
-            for (Task task : projectTasks) {
-                if (task.getId() == id) {
-                    return task;
-                }
-            }
-        }
-        return null;
     }
 
     private void viewByDeadline() {
-        Map<LocalDate, List<Task>> tasksByDeadline = new TreeMap<>();
-        List<Task> tasksWithoutDeadline = new ArrayList<>();
+        TaskListService.DeadlineView deadlineView = taskListService.getDeadlineView();
 
-        for (List<Task> projectTasks : tasks.values()) {
-            for (Task task : projectTasks) {
-                if (task.hasDeadline()) {
-                    tasksByDeadline
-                            .computeIfAbsent(task.getDeadline(), deadline -> new ArrayList<>())
-                            .add(task);
-                } else {
-                    tasksWithoutDeadline.add(task);
-                }
-            }
+        for (Map.Entry<LocalDate, List<Task>> deadlineGroup : deadlineView.tasksByDeadline().entrySet()) {
+            printDeadlineGroup(
+                    DEADLINE_FORMATTER.format(deadlineGroup.getKey()),
+                    deadlineGroup.getValue()
+            );
         }
 
-        for (Map.Entry<LocalDate, List<Task>> deadlineGroup : tasksByDeadline.entrySet()) {
-            printDeadlineGroup(DEADLINE_FORMATTER.format(deadlineGroup.getKey()), deadlineGroup.getValue());
-        }
-
-        if (!tasksWithoutDeadline.isEmpty()) {
-            printDeadlineGroup("No deadline", tasksWithoutDeadline);
+        if (!deadlineView.tasksWithoutDeadline().isEmpty()) {
+            printDeadlineGroup("No deadline", deadlineView.tasksWithoutDeadline());
         }
     }
 
     private void printDeadlineGroup(String title, List<Task> tasks) {
         out.printf("%s:%n", title);
+
         for (Task task : tasks) {
             out.printf("       %d: %s%n", task.getId(), task.getDescription());
         }
     }
 
-    private void error(String command) {
-        out.printf("I don't know what the command \"%s\" is.", command);
+    private void help() {
+        out.println("Commands:");
+        out.println("  show");
+        out.println("  add project <project name>");
+        out.println("  add task <project name> <task description>");
+        out.println("  check <task ID>");
+        out.println("  uncheck <task ID>");
+        out.println("  deadline <task ID> <date>");
+        out.println("  view-by-deadline");
         out.println();
     }
 
-    private long nextId() {
-        return ++lastId;
+    private void error(String command) {
+        out.printf("I don't know what the command \"%s\" is.", command);
+        out.println();
     }
 }
