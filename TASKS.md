@@ -11,31 +11,31 @@ Extend the existing task list application with task deadlines, a deadline-based 
 * [x] Create public GitHub repository
 * [x] Add original Java codebase
 * [x] Add `.gitignore`
-* [ ] Add README with solution notes
-* [ ] Add this task plan
+* [x] Add README with solution notes
+* [x] Add this task plan
 
 ### P1 - Add deadlines to tasks
 
-* [ ] Add a deadline field to `Task`
-* [ ] Make the default deadline empty
-* [ ] Parse dates in `dd-MM-yyyy` format
-* [ ] Add the console command `deadline <ID> <date>`
-* [ ] Add tests for setting deadlines
+* [x] Add a deadline field to `Task`
+* [x] Make the default deadline empty
+* [x] Parse dates in `dd-MM-yyyy` format
+* [x] Add the console command `deadline <ID> <date>`
+* [x] Add tests for setting deadlines
 
 ### P2 - Add deadline view
 
-* [ ] Add the console command `view-by-deadline`
-* [ ] Group tasks by deadline
-* [ ] Sort deadline groups chronologically
-* [ ] Show tasks without a deadline in a `No deadline` block at the end
-* [ ] Add tests for grouping and ordering
+* [x] Add the console command `view-by-deadline`
+* [x] Group tasks by deadline
+* [x] Sort deadline groups chronologically
+* [x] Show tasks without a deadline in a `No deadline` block at the end
+* [x] Add tests for grouping and ordering
 
 ### P3 - Refactor for multiple interfaces
 
-* [ ] Extract core business logic from the console class
-* [ ] Introduce a `TaskListService`
-* [ ] Keep the console application working
-* [ ] Add tests for the core service
+* [x] Extract core business logic from the console class
+* [x] Introduce a `TaskListService`
+* [x] Keep the console application working
+* [x] Add tests for the core service
 
 ### P4 - REST API
 
