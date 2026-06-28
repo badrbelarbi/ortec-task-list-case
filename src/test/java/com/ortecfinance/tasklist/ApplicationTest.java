@@ -139,7 +139,7 @@ public final class ApplicationTest {
     }
 
     @Test
-    void it_shows_tasks_grouped_by_deadline_in_chronological_order() throws IOException {
+    void it_shows_tasks_grouped_by_deadline_and_project_in_chronological_order() throws IOException {
         execute("add project secrets");
         execute("add task secrets Eat more donuts.");
         execute("add task secrets Refactor the codebase");
@@ -154,10 +154,13 @@ public final class ApplicationTest {
 
         readLines(
                 "11-11-2021:",
+                "    training:",
                 "       3: Interaction-Driven Design",
                 "13-11-2021:",
+                "    secrets:",
                 "       1: Eat more donuts.",
                 "No deadline:",
+                "    secrets:",
                 "       2: Refactor the codebase"
         );
 
@@ -165,7 +168,7 @@ public final class ApplicationTest {
     }
 
     @Test
-    void it_shows_tasks_due_today() throws IOException {
+    void it_shows_tasks_due_today_grouped_by_project() throws IOException {
         execute("add project secrets");
         execute("add task secrets Eat more donuts.");
         execute("add task secrets Refactor the codebase");
@@ -180,9 +183,12 @@ public final class ApplicationTest {
         execute("today");
 
         readLines(
-                "Today:",
-                "       1: Eat more donuts.",
-                "       3: Interaction-Driven Design"
+                "secrets",
+                "    [ ] 1: Eat more donuts.",
+                "",
+                "training",
+                "    [ ] 3: Interaction-Driven Design",
+                ""
         );
 
         execute("quit");

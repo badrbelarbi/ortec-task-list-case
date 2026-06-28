@@ -106,20 +106,7 @@ public final class TaskList implements Runnable {
     }
 
     private void show() {
-        for (Map.Entry<String, List<Task>> project : taskListService.getProjects().entrySet()) {
-            out.println(project.getKey());
-
-            for (Task task : project.getValue()) {
-                out.printf(
-                        "    [%c] %d: %s%n",
-                        task.isDone() ? 'x' : ' ',
-                        task.getId(),
-                        task.getDescription()
-                );
-            }
-
-            out.println();
-        }
+        printProjects(taskListService.getProjects());
     }
 
     private void add(String commandLine) {
@@ -202,35 +189,53 @@ public final class TaskList implements Runnable {
     private void viewByDeadline() {
         TaskListService.DeadlineView deadlineView = taskListService.getDeadlineView();
 
-        for (Map.Entry<LocalDate, List<Task>> deadlineGroup : deadlineView.tasksByDeadline().entrySet()) {
-            printDeadlineGroup(
-                    DEADLINE_FORMATTER.format(deadlineGroup.getKey()),
-                    deadlineGroup.getValue()
-            );
+        for (Map.Entry<LocalDate, Map<String, List<Task>>> deadlineGroup : deadlineView.tasksByDeadline().entrySet()) {
+            out.printf("%s:%n", DEADLINE_FORMATTER.format(deadlineGroup.getKey()));
+            printProjectGroups(deadlineGroup.getValue());
         }
 
         if (!deadlineView.tasksWithoutDeadline().isEmpty()) {
-            printDeadlineGroup("No deadline", deadlineView.tasksWithoutDeadline());
+            out.println("No deadline:");
+            printProjectGroups(deadlineView.tasksWithoutDeadline());
         }
     }
 
     private void today() {
         LocalDate today = LocalDate.now(clock);
-        List<Task> tasksDueToday = taskListService.getTasksDueOn(today);
+        Map<String, List<Task>> projectsWithTasksDueToday = taskListService.getProjectsWithTasksDueOn(today);
 
-        if (tasksDueToday.isEmpty()) {
+        if (projectsWithTasksDueToday.isEmpty()) {
             out.println("No tasks due today.");
             return;
         }
 
-        printDeadlineGroup("Today", tasksDueToday);
+        printProjects(projectsWithTasksDueToday);
     }
 
-    private void printDeadlineGroup(String title, List<Task> tasks) {
-        out.printf("%s:%n", title);
+    private void printProjects(Map<String, List<Task>> projects) {
+        for (Map.Entry<String, List<Task>> project : projects.entrySet()) {
+            out.println(project.getKey());
 
-        for (Task task : tasks) {
-            out.printf("       %d: %s%n", task.getId(), task.getDescription());
+            for (Task task : project.getValue()) {
+                out.printf(
+                        "    [%c] %d: %s%n",
+                        task.isDone() ? 'x' : ' ',
+                        task.getId(),
+                        task.getDescription()
+                );
+            }
+
+            out.println();
+        }
+    }
+
+    private void printProjectGroups(Map<String, List<Task>> projects) {
+        for (Map.Entry<String, List<Task>> project : projects.entrySet()) {
+            out.printf("    %s:%n", project.getKey());
+
+            for (Task task : project.getValue()) {
+                out.printf("       %d: %s%n", task.getId(), task.getDescription());
+            }
         }
     }
 

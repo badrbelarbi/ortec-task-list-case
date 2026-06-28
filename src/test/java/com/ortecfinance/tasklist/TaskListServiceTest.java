@@ -82,7 +82,7 @@ public final class TaskListServiceTest {
     }
 
     @Test
-    void it_groups_tasks_by_deadline_with_no_deadline_tasks_last() {
+    void it_groups_tasks_by_deadline_and_project_with_no_deadline_tasks_last() {
         TaskListService service = new TaskListService();
 
         service.addProject("secrets");
@@ -101,13 +101,23 @@ public final class TaskListServiceTest {
         TaskListService.DeadlineView deadlineView = service.getDeadlineView();
 
         assertThat(deadlineView.tasksByDeadline().keySet(), contains(earlierDeadline, laterDeadline));
-        assertThat(deadlineView.tasksByDeadline().get(earlierDeadline).getFirst().getDescription(), is("Interaction-Driven Design"));
-        assertThat(deadlineView.tasksByDeadline().get(laterDeadline).getFirst().getDescription(), is("Eat more donuts."));
-        assertThat(deadlineView.tasksWithoutDeadline().getFirst().getDescription(), is("Refactor the codebase"));
+
+        Map<String, List<Task>> earlierDeadlineProjects = deadlineView.tasksByDeadline().get(earlierDeadline);
+        Map<String, List<Task>> laterDeadlineProjects = deadlineView.tasksByDeadline().get(laterDeadline);
+        Map<String, List<Task>> projectsWithoutDeadline = deadlineView.tasksWithoutDeadline();
+
+        assertThat(earlierDeadlineProjects, hasKey("training"));
+        assertThat(earlierDeadlineProjects.get("training").getFirst().getDescription(), is("Interaction-Driven Design"));
+
+        assertThat(laterDeadlineProjects, hasKey("secrets"));
+        assertThat(laterDeadlineProjects.get("secrets").getFirst().getDescription(), is("Eat more donuts."));
+
+        assertThat(projectsWithoutDeadline, hasKey("secrets"));
+        assertThat(projectsWithoutDeadline.get("secrets").getFirst().getDescription(), is("Refactor the codebase"));
     }
 
     @Test
-    void it_returns_tasks_due_on_a_specific_date() {
+    void it_returns_projects_with_tasks_due_on_a_specific_date() {
         TaskListService service = new TaskListService();
 
         service.addProject("secrets");
@@ -124,10 +134,10 @@ public final class TaskListServiceTest {
         service.setDeadline(2, tomorrow);
         service.setDeadline(3, today);
 
-        List<Task> tasksDueToday = service.getTasksDueOn(today);
+        Map<String, List<Task>> projectsWithTasksDueToday = service.getProjectsWithTasksDueOn(today);
 
-        assertThat(tasksDueToday.size(), is(2));
-        assertThat(tasksDueToday.get(0).getDescription(), is("Eat more donuts."));
-        assertThat(tasksDueToday.get(1).getDescription(), is("Interaction-Driven Design"));
+        assertThat(projectsWithTasksDueToday.keySet(), contains("secrets", "training"));
+        assertThat(projectsWithTasksDueToday.get("secrets").getFirst().getDescription(), is("Eat more donuts."));
+        assertThat(projectsWithTasksDueToday.get("training").getFirst().getDescription(), is("Interaction-Driven Design"));
     }
 }

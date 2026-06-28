@@ -91,12 +91,13 @@ public class TaskController {
                 .map(this::toDeadlineGroupResponse)
                 .toList();
 
-        List<TaskResponse> tasksWithoutDeadline = deadlineView.tasksWithoutDeadline()
+        List<ProjectResponse> projectsWithoutDeadline = deadlineView.tasksWithoutDeadline()
+                .entrySet()
                 .stream()
-                .map(TaskResponse::from)
+                .map(this::toProjectResponse)
                 .toList();
 
-        return new DeadlineViewResponse(deadlineGroups, tasksWithoutDeadline);
+        return new DeadlineViewResponse(deadlineGroups, projectsWithoutDeadline);
     }
 
     private ProjectResponse toProjectResponse(Map.Entry<String, List<Task>> project) {
@@ -108,13 +109,14 @@ public class TaskController {
         return new ProjectResponse(project.getKey(), tasks);
     }
 
-    private DeadlineGroupResponse toDeadlineGroupResponse(Map.Entry<LocalDate, List<Task>> deadlineGroup) {
-        List<TaskResponse> tasks = deadlineGroup.getValue()
+    private DeadlineGroupResponse toDeadlineGroupResponse(Map.Entry<LocalDate, Map<String, List<Task>>> deadlineGroup) {
+        List<ProjectResponse> projects = deadlineGroup.getValue()
+                .entrySet()
                 .stream()
-                .map(TaskResponse::from)
+                .map(this::toProjectResponse)
                 .toList();
 
-        return new DeadlineGroupResponse(deadlineGroup.getKey(), tasks);
+        return new DeadlineGroupResponse(deadlineGroup.getKey(), projects);
     }
 
     private LocalDate parseDeadline(String deadline) {
@@ -140,13 +142,13 @@ public class TaskController {
 
     public record DeadlineViewResponse(
             List<DeadlineGroupResponse> deadlineGroups,
-            List<TaskResponse> tasksWithoutDeadline
+            List<ProjectResponse> projectsWithoutDeadline
     ) {
     }
 
     public record DeadlineGroupResponse(
             LocalDate deadline,
-            List<TaskResponse> tasks
+            List<ProjectResponse> projects
     ) {
     }
 

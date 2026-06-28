@@ -171,23 +171,35 @@ public final class TaskControllerTest {
     }
 
     @Test
-    void it_returns_projects_grouped_by_deadline() throws Exception {
+    void it_returns_projects_grouped_by_deadline_and_project() throws Exception {
         LocalDate earlierDeadline = LocalDate.of(2021, 11, 11);
         LocalDate laterDeadline = LocalDate.of(2021, 11, 13);
 
-        Map<LocalDate, List<Task>> tasksByDeadline = new LinkedHashMap<>();
-        tasksByDeadline.put(
-                earlierDeadline,
+        Map<String, List<Task>> earlierDeadlineProjects = new LinkedHashMap<>();
+        earlierDeadlineProjects.put(
+                "training",
                 List.of(new Task(3, "Interaction-Driven Design", false, earlierDeadline))
         );
-        tasksByDeadline.put(
-                laterDeadline,
+
+        Map<String, List<Task>> laterDeadlineProjects = new LinkedHashMap<>();
+        laterDeadlineProjects.put(
+                "secrets",
                 List.of(new Task(1, "Eat more donuts.", false, laterDeadline))
+        );
+
+        Map<LocalDate, Map<String, List<Task>>> tasksByDeadline = new LinkedHashMap<>();
+        tasksByDeadline.put(earlierDeadline, earlierDeadlineProjects);
+        tasksByDeadline.put(laterDeadline, laterDeadlineProjects);
+
+        Map<String, List<Task>> tasksWithoutDeadline = new LinkedHashMap<>();
+        tasksWithoutDeadline.put(
+                "secrets",
+                List.of(new Task(2, "Refactor the codebase", false))
         );
 
         TaskListService.DeadlineView deadlineView = new TaskListService.DeadlineView(
                 tasksByDeadline,
-                List.of(new Task(2, "Refactor the codebase", false))
+                tasksWithoutDeadline
         );
 
         when(taskListService.getDeadlineView()).thenReturn(deadlineView);
@@ -196,12 +208,15 @@ public final class TaskControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(APPLICATION_JSON))
                 .andExpect(jsonPath("$.deadlineGroups[0].deadline").value("2021-11-11"))
-                .andExpect(jsonPath("$.deadlineGroups[0].tasks[0].id").value(3))
-                .andExpect(jsonPath("$.deadlineGroups[0].tasks[0].description").value("Interaction-Driven Design"))
+                .andExpect(jsonPath("$.deadlineGroups[0].projects[0].name").value("training"))
+                .andExpect(jsonPath("$.deadlineGroups[0].projects[0].tasks[0].id").value(3))
+                .andExpect(jsonPath("$.deadlineGroups[0].projects[0].tasks[0].description").value("Interaction-Driven Design"))
                 .andExpect(jsonPath("$.deadlineGroups[1].deadline").value("2021-11-13"))
-                .andExpect(jsonPath("$.deadlineGroups[1].tasks[0].id").value(1))
-                .andExpect(jsonPath("$.deadlineGroups[1].tasks[0].description").value("Eat more donuts."))
-                .andExpect(jsonPath("$.tasksWithoutDeadline[0].id").value(2))
-                .andExpect(jsonPath("$.tasksWithoutDeadline[0].description").value("Refactor the codebase"));
+                .andExpect(jsonPath("$.deadlineGroups[1].projects[0].name").value("secrets"))
+                .andExpect(jsonPath("$.deadlineGroups[1].projects[0].tasks[0].id").value(1))
+                .andExpect(jsonPath("$.deadlineGroups[1].projects[0].tasks[0].description").value("Eat more donuts."))
+                .andExpect(jsonPath("$.projectsWithoutDeadline[0].name").value("secrets"))
+                .andExpect(jsonPath("$.projectsWithoutDeadline[0].tasks[0].id").value(2))
+                .andExpect(jsonPath("$.projectsWithoutDeadline[0].tasks[0].description").value("Refactor the codebase"));
     }
 }

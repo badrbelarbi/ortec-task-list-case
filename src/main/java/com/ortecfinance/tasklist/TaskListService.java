@@ -71,58 +71,73 @@ public final class TaskListService {
     }
 
     public Map<String, List<Task>> getProjects() {
-        Map<String, List<Task>> projects = new LinkedHashMap<>();
-
-        for (Map.Entry<String, List<Task>> project : tasks.entrySet()) {
-            projects.put(project.getKey(), List.copyOf(project.getValue()));
-        }
-
-        return Collections.unmodifiableMap(projects);
+        return copyProjects(tasks);
     }
 
-    public List<Task> getTasksDueOn(LocalDate date) {
-        List<Task> tasksDueOnDate = new ArrayList<>();
+    public Map<String, List<Task>> getProjectsWithTasksDueOn(LocalDate date) {
+        Map<String, List<Task>> projectsWithTasksDueOnDate = new LinkedHashMap<>();
 
-        for (List<Task> projectTasks : tasks.values()) {
-            for (Task task : projectTasks) {
+        for (Map.Entry<String, List<Task>> project : tasks.entrySet()) {
+            List<Task> tasksDueOnDate = new ArrayList<>();
+
+            for (Task task : project.getValue()) {
                 if (task.hasDeadline() && task.getDeadline().equals(date)) {
                     tasksDueOnDate.add(task);
                 }
             }
+
+            if (!tasksDueOnDate.isEmpty()) {
+                projectsWithTasksDueOnDate.put(project.getKey(), tasksDueOnDate);
+            }
         }
 
-        return List.copyOf(tasksDueOnDate);
+        return copyProjects(projectsWithTasksDueOnDate);
     }
 
     public DeadlineView getDeadlineView() {
-        Map<LocalDate, List<Task>> tasksByDeadline = new TreeMap<>();
-        List<Task> tasksWithoutDeadline = new ArrayList<>();
+        Map<LocalDate, Map<String, List<Task>>> tasksByDeadline = new TreeMap<>();
+        Map<String, List<Task>> tasksWithoutDeadline = new LinkedHashMap<>();
 
-        for (List<Task> projectTasks : tasks.values()) {
-            for (Task task : projectTasks) {
+        for (Map.Entry<String, List<Task>> project : tasks.entrySet()) {
+            String projectName = project.getKey();
+
+            for (Task task : project.getValue()) {
                 if (task.hasDeadline()) {
                     tasksByDeadline
-                            .computeIfAbsent(task.getDeadline(), deadline -> new ArrayList<>())
+                            .computeIfAbsent(task.getDeadline(), deadline -> new LinkedHashMap<>())
+                            .computeIfAbsent(projectName, name -> new ArrayList<>())
                             .add(task);
                 } else {
-                    tasksWithoutDeadline.add(task);
+                    tasksWithoutDeadline
+                            .computeIfAbsent(projectName, name -> new ArrayList<>())
+                            .add(task);
                 }
             }
         }
 
-        Map<LocalDate, List<Task>> orderedTasksByDeadline = new LinkedHashMap<>();
+        Map<LocalDate, Map<String, List<Task>>> orderedTasksByDeadline = new LinkedHashMap<>();
 
-        for (Map.Entry<LocalDate, List<Task>> deadlineGroup : tasksByDeadline.entrySet()) {
+        for (Map.Entry<LocalDate, Map<String, List<Task>>> deadlineGroup : tasksByDeadline.entrySet()) {
             orderedTasksByDeadline.put(
                     deadlineGroup.getKey(),
-                    List.copyOf(deadlineGroup.getValue())
+                    copyProjects(deadlineGroup.getValue())
             );
         }
 
         return new DeadlineView(
                 Collections.unmodifiableMap(orderedTasksByDeadline),
-                List.copyOf(tasksWithoutDeadline)
+                copyProjects(tasksWithoutDeadline)
         );
+    }
+
+    private Map<String, List<Task>> copyProjects(Map<String, List<Task>> projectsToCopy) {
+        Map<String, List<Task>> projects = new LinkedHashMap<>();
+
+        for (Map.Entry<String, List<Task>> project : projectsToCopy.entrySet()) {
+            projects.put(project.getKey(), List.copyOf(project.getValue()));
+        }
+
+        return Collections.unmodifiableMap(projects);
     }
 
     private Task findTask(String project, long taskId) {
@@ -158,8 +173,8 @@ public final class TaskListService {
     }
 
     public record DeadlineView(
-            Map<LocalDate, List<Task>> tasksByDeadline,
-            List<Task> tasksWithoutDeadline
+            Map<LocalDate, Map<String, List<Task>>> tasksByDeadline,
+            Map<String, List<Task>> tasksWithoutDeadline
     ) {
     }
 }
