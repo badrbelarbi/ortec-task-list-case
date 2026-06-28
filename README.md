@@ -2,7 +2,7 @@
 
 This repository contains my Java solution for the Ortec Finance task list case.
 
-The original application was a console-based task list. I extended it with task deadlines, a deadline-based overview, a reusable service layer, and REST endpoints.
+The original application was a console-based task list. I extended it with task deadlines, a deadline-based overview, a `today` command, a reusable service layer, and REST endpoints.
 
 ## Implemented features
 
@@ -18,6 +18,7 @@ check <task ID>
 uncheck <task ID>
 deadline <task ID> <date>
 view-by-deadline
+today
 help
 quit
 ```
@@ -60,6 +61,32 @@ Example output:
 No deadline:
        2: Refactor the codebase
 ```
+
+### Tasks due today
+
+The command:
+
+```text
+today
+```
+
+shows tasks with a deadline equal to the current date.
+
+Example output:
+
+```text
+Today:
+       1: Pay bills
+       3: Submit assignment
+```
+
+If no tasks are due today, the command prints:
+
+```text
+No tasks due today.
+```
+
+The command uses the application clock, which makes the behavior testable with a fixed date in automated tests.
 
 ## REST API
 
@@ -129,7 +156,7 @@ REST responses use the standard JSON date format:
 yyyy-MM-dd
 ```
 
-Example:
+Example response:
 
 ```json
 {
@@ -186,6 +213,7 @@ This keeps the console application focused on parsing commands and printing outp
 * creating tasks
 * checking and unchecking tasks
 * setting deadlines
+* finding tasks due on a specific date
 * grouping tasks by deadline
 
 This also allows the REST controller to reuse the same core logic instead of duplicating behavior.
@@ -195,6 +223,14 @@ This also allows the REST controller to reuse the same core logic instead of dup
 Deadlines are stored as `LocalDate` instead of strings. This makes sorting and validation safer and keeps date-related logic explicit.
 
 The console accepts dates in `dd-MM-yyyy` format because that is the format requested in the assignment. Internally, strict parsing is used to reject invalid dates.
+
+REST responses use the standard JSON date format `yyyy-MM-dd`.
+
+### Testable time handling
+
+The `today` command depends on the current date. To keep this testable, the console application uses a `Clock`. In production it uses the system clock, while tests can inject a fixed clock.
+
+This avoids tests that depend on the real current date.
 
 ### In-memory storage
 
@@ -211,7 +247,8 @@ The implementation was split into small steps:
 5. Service refactor
 6. Required REST endpoints
 7. Optional REST endpoints
-8. Tests and documentation updates
+8. Today command
+9. Tests and documentation updates
 
 ## Testing
 
@@ -220,6 +257,7 @@ The solution includes tests for:
 * task deadline behavior
 * console command behavior
 * deadline grouping and ordering
+* tasks due today
 * service-level task list logic
 * required REST endpoints
 * optional REST endpoints
