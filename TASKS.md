@@ -41,8 +41,8 @@ Extend the existing task list application with task deadlines, a deadline-based 
 
 Required:
 
-* [ ] `POST /projects` to create a project
-* [ ] `GET /projects` to return all projects and tasks
+* [x] `POST /projects` to create a project
+* [x] `GET /projects` to return all projects and tasks
 
 Optional:
 
