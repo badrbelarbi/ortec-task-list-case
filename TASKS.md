@@ -46,9 +46,9 @@ Required:
 
 Optional:
 
-* [ ] `POST /projects/{projectId}/tasks`
-* [ ] `PUT /projects/{projectId}/tasks/{taskId}?deadline=<date>`
-* [ ] `GET /projects/view_by_deadline`
+* [x] `POST /projects/{projectId}/tasks`
+* [x] `PUT /projects/{projectId}/tasks/{taskId}?deadline=<date>`
+* [x] `GET /projects/view_by_deadline`
 
 ### P5 - Optional features
 
