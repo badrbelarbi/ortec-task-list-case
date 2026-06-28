@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 
 @Service
@@ -20,14 +21,20 @@ public final class TaskListService {
     }
 
     public boolean addTask(String project, String description) {
+        return createTask(project, description).isPresent();
+    }
+
+    public Optional<Task> createTask(String project, String description) {
         List<Task> projectTasks = tasks.get(project);
 
         if (projectTasks == null) {
-            return false;
+            return Optional.empty();
         }
 
-        projectTasks.add(new Task(nextId(), description, false));
-        return true;
+        Task task = new Task(nextId(), description, false);
+        projectTasks.add(task);
+
+        return Optional.of(task);
     }
 
     public boolean setDone(long id, boolean done) {
@@ -50,6 +57,17 @@ public final class TaskListService {
 
         task.setDeadline(deadline);
         return true;
+    }
+
+    public Optional<Task> setDeadline(String project, long taskId, LocalDate deadline) {
+        Task task = findTask(project, taskId);
+
+        if (task == null) {
+            return Optional.empty();
+        }
+
+        task.setDeadline(deadline);
+        return Optional.of(task);
     }
 
     public Map<String, List<Task>> getProjects() {
@@ -91,6 +109,22 @@ public final class TaskListService {
                 Collections.unmodifiableMap(orderedTasksByDeadline),
                 List.copyOf(tasksWithoutDeadline)
         );
+    }
+
+    private Task findTask(String project, long taskId) {
+        List<Task> projectTasks = tasks.get(project);
+
+        if (projectTasks == null) {
+            return null;
+        }
+
+        for (Task task : projectTasks) {
+            if (task.getId() == taskId) {
+                return task;
+            }
+        }
+
+        return null;
     }
 
     private Task findTask(long id) {
