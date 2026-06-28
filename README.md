@@ -2,27 +2,31 @@
 
 This repository contains my Java solution for the Ortec Finance task list case.
 
-## Assignment summary
+The original application was a console-based task list. I extended it with task deadlines, a deadline-based overview, a reusable service layer, and REST endpoints.
 
-The existing application supports creating projects, adding tasks, checking and unchecking tasks, and viewing tasks grouped by project.
+## Implemented features
 
-The goal of this assignment is to extend the application with deadlines, add a deadline-based view, and refactor the codebase so that the core logic is easier to test and can be reused by multiple interfaces such as the console application and REST APIs.
+### Console application
 
-## Planned implementation
+The console application supports:
 
-The work is split into small, meaningful steps:
+```text
+show
+add project <project name>
+add task <project name> <task description>
+check <task ID>
+uncheck <task ID>
+deadline <task ID> <date>
+view-by-deadline
+help
+quit
+```
 
-1. Add documentation and a short implementation plan.
-2. Add deadline support to tasks.
-3. Add the `deadline <ID> <date>` console command.
-4. Add the `view-by-deadline` console command.
-5. Refactor core task list logic away from the console layer.
-6. Add or improve tests for the new behavior.
-7. Add REST endpoints if time allows.
+### Deadlines
 
-## Date format
+Tasks can have an optional deadline.
 
-Deadlines use the following format:
+Deadline input in the console uses this format:
 
 ```text
 dd-MM-yyyy
@@ -34,33 +38,197 @@ Example:
 deadline 1 25-11-2024
 ```
 
-## Commands
+Tasks without a deadline are still valid. In the deadline overview, they are shown at the end under a `No deadline` block.
 
-Existing commands:
+### Deadline overview
 
-```text
-show
-add project <project name>
-add task <project name> <task description>
-check <task ID>
-uncheck <task ID>
-help
-quit
-```
-
-New planned commands:
+The command:
 
 ```text
-deadline <task ID> <date>
 view-by-deadline
 ```
 
-Optional command if time allows:
+shows tasks grouped by deadline. Deadline groups are sorted chronologically. Tasks without a deadline are shown last.
+
+Example output:
 
 ```text
-today
+11-11-2021:
+       3: Interaction-Driven Design
+13-11-2021:
+       1: Eat more donuts.
+No deadline:
+       2: Refactor the codebase
 ```
 
-## Notes
+## REST API
 
-The main focus is to keep the existing functionality working, add tests for the new behavior, and make the code easier to maintain without over-engineering the solution.
+The application also exposes REST endpoints for projects and tasks.
+
+### Create a project
+
+```http
+POST /projects
+Content-Type: application/json
+```
+
+```json
+{
+  "name": "secrets"
+}
+```
+
+### Get all projects
+
+```http
+GET /projects
+```
+
+Example response:
+
+```json
+[
+  {
+    "name": "secrets",
+    "tasks": [
+      {
+        "id": 1,
+        "description": "Eat more donuts.",
+        "done": false,
+        "deadline": null
+      }
+    ]
+  }
+]
+```
+
+### Create a task in a project
+
+```http
+POST /projects/{projectId}/tasks
+Content-Type: application/json
+```
+
+In this implementation, `projectId` refers to the project name, because the original application identifies projects by name.
+
+```json
+{
+  "description": "Eat more donuts."
+}
+```
+
+### Set a task deadline
+
+```http
+PUT /projects/{projectId}/tasks/{taskId}?deadline=25-11-2024
+```
+
+REST responses use the standard JSON date format:
+
+```text
+yyyy-MM-dd
+```
+
+Example:
+
+```json
+{
+  "id": 1,
+  "description": "Eat more donuts.",
+  "done": false,
+  "deadline": "2024-11-25"
+}
+```
+
+### Get projects grouped by deadline
+
+```http
+GET /projects/view_by_deadline
+```
+
+Example response:
+
+```json
+{
+  "deadlineGroups": [
+    {
+      "deadline": "2024-11-25",
+      "tasks": [
+        {
+          "id": 1,
+          "description": "Eat more donuts.",
+          "done": false,
+          "deadline": "2024-11-25"
+        }
+      ]
+    }
+  ],
+  "tasksWithoutDeadline": [
+    {
+      "id": 2,
+      "description": "Refactor the codebase",
+      "done": false,
+      "deadline": null
+    }
+  ]
+}
+```
+
+## Design choices
+
+### Core logic extracted from the console
+
+The original console class handled both user input/output and task list logic. I extracted the core logic into `TaskListService`.
+
+This keeps the console application focused on parsing commands and printing output, while the service owns the task list behavior:
+
+* creating projects
+* creating tasks
+* checking and unchecking tasks
+* setting deadlines
+* grouping tasks by deadline
+
+This also allows the REST controller to reuse the same core logic instead of duplicating behavior.
+
+### Date handling
+
+Deadlines are stored as `LocalDate` instead of strings. This makes sorting and validation safer and keeps date-related logic explicit.
+
+The console accepts dates in `dd-MM-yyyy` format because that is the format requested in the assignment. Internally, strict parsing is used to reject invalid dates.
+
+### In-memory storage
+
+The application keeps projects and tasks in memory. This matches the original codebase and keeps the solution focused on the requested behavior instead of adding persistence complexity.
+
+### Small commits
+
+The implementation was split into small steps:
+
+1. Project setup and documentation
+2. Deadline support
+3. Deadline console command
+4. Deadline overview
+5. Service refactor
+6. Required REST endpoints
+7. Optional REST endpoints
+8. Tests and documentation updates
+
+## Testing
+
+The solution includes tests for:
+
+* task deadline behavior
+* console command behavior
+* deadline grouping and ordering
+* service-level task list logic
+* required REST endpoints
+* optional REST endpoints
+
+The tests can be run from IntelliJ using the existing JUnit configuration.
+
+## Known limitations
+
+* Data is stored in memory and is lost when the application stops.
+* Projects are identified by name, following the original console application model.
+* There is no authentication or authorization.
+* REST endpoint coverage focuses on the assignment scope and selected optional endpoints.
