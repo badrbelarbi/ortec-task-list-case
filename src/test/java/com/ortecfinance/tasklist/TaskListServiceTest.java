@@ -105,4 +105,29 @@ public final class TaskListServiceTest {
         assertThat(deadlineView.tasksByDeadline().get(laterDeadline).getFirst().getDescription(), is("Eat more donuts."));
         assertThat(deadlineView.tasksWithoutDeadline().getFirst().getDescription(), is("Refactor the codebase"));
     }
+
+    @Test
+    void it_returns_tasks_due_on_a_specific_date() {
+        TaskListService service = new TaskListService();
+
+        service.addProject("secrets");
+        service.addTask("secrets", "Eat more donuts.");
+        service.addTask("secrets", "Refactor the codebase");
+
+        service.addProject("training");
+        service.addTask("training", "Interaction-Driven Design");
+
+        LocalDate today = LocalDate.of(2024, 11, 25);
+        LocalDate tomorrow = LocalDate.of(2024, 11, 26);
+
+        service.setDeadline(1, today);
+        service.setDeadline(2, tomorrow);
+        service.setDeadline(3, today);
+
+        List<Task> tasksDueToday = service.getTasksDueOn(today);
+
+        assertThat(tasksDueToday.size(), is(2));
+        assertThat(tasksDueToday.get(0).getDescription(), is("Eat more donuts."));
+        assertThat(tasksDueToday.get(1).getDescription(), is("Interaction-Driven Design"));
+    }
 }

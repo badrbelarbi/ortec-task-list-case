@@ -80,6 +80,20 @@ public final class TaskListService {
         return Collections.unmodifiableMap(projects);
     }
 
+    public List<Task> getTasksDueOn(LocalDate date) {
+        List<Task> tasksDueOnDate = new ArrayList<>();
+
+        for (List<Task> projectTasks : tasks.values()) {
+            for (Task task : projectTasks) {
+                if (task.hasDeadline() && task.getDeadline().equals(date)) {
+                    tasksDueOnDate.add(task);
+                }
+            }
+        }
+
+        return List.copyOf(tasksDueOnDate);
+    }
+
     public DeadlineView getDeadlineView() {
         Map<LocalDate, List<Task>> tasksByDeadline = new TreeMap<>();
         List<Task> tasksWithoutDeadline = new ArrayList<>();

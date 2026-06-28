@@ -3,6 +3,9 @@ package com.ortecfinance.tasklist;
 import org.junit.jupiter.api.*;
 
 import java.io.*;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 
 import static java.lang.System.lineSeparator;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -10,6 +13,10 @@ import static org.hamcrest.Matchers.is;
 
 public final class ApplicationTest {
     public static final String PROMPT = "> ";
+
+    private static final Clock FIXED_CLOCK =
+            Clock.fixed(Instant.parse("2024-11-25T00:00:00Z"), ZoneId.of("UTC"));
+
     private final PipedOutputStream inStream = new PipedOutputStream();
     private final PrintWriter inWriter = new PrintWriter(inStream, true);
 
@@ -21,7 +28,7 @@ public final class ApplicationTest {
     public ApplicationTest() throws IOException {
         BufferedReader in = new BufferedReader(new InputStreamReader(new PipedInputStream(inStream)));
         PrintWriter out = new PrintWriter(new PipedOutputStream(outStream), true);
-        TaskList taskList = new TaskList(in, out);
+        TaskList taskList = new TaskList(in, out, new TaskListService(), FIXED_CLOCK);
         applicationThread = new Thread(taskList);
     }
 
@@ -56,10 +63,10 @@ public final class ApplicationTest {
 
         execute("show");
         readLines(
-            "secrets",
-            "    [ ] 1: Eat more donuts.",
-            "    [ ] 2: Destroy all humans.",
-            ""
+                "secrets",
+                "    [ ] 1: Eat more donuts.",
+                "    [ ] 2: Destroy all humans.",
+                ""
         );
 
         execute("add project training");
@@ -107,6 +114,7 @@ public final class ApplicationTest {
                 "  uncheck <task ID>",
                 "  deadline <task ID> <date>",
                 "  view-by-deadline",
+                "  today",
                 ""
         );
 
@@ -152,6 +160,43 @@ public final class ApplicationTest {
                 "No deadline:",
                 "       2: Refactor the codebase"
         );
+
+        execute("quit");
+    }
+
+    @Test
+    void it_shows_tasks_due_today() throws IOException {
+        execute("add project secrets");
+        execute("add task secrets Eat more donuts.");
+        execute("add task secrets Refactor the codebase");
+
+        execute("add project training");
+        execute("add task training Interaction-Driven Design");
+
+        execute("deadline 1 25-11-2024");
+        execute("deadline 2 26-11-2024");
+        execute("deadline 3 25-11-2024");
+
+        execute("today");
+
+        readLines(
+                "Today:",
+                "       1: Eat more donuts.",
+                "       3: Interaction-Driven Design"
+        );
+
+        execute("quit");
+    }
+
+    @Test
+    void it_shows_message_when_no_tasks_are_due_today() throws IOException {
+        execute("add project secrets");
+        execute("add task secrets Refactor the codebase");
+        execute("deadline 1 26-11-2024");
+
+        execute("today");
+
+        readLines("No tasks due today.");
 
         execute("quit");
     }

@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -20,6 +21,7 @@ public final class TaskList implements Runnable {
     private final TaskListService taskListService;
     private final BufferedReader in;
     private final PrintWriter out;
+    private final Clock clock;
 
     public static void startConsole() {
         BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
@@ -28,13 +30,18 @@ public final class TaskList implements Runnable {
     }
 
     public TaskList(BufferedReader reader, PrintWriter writer) {
-        this(reader, writer, new TaskListService());
+        this(reader, writer, new TaskListService(), Clock.systemDefaultZone());
     }
 
     public TaskList(BufferedReader reader, PrintWriter writer, TaskListService taskListService) {
+        this(reader, writer, taskListService, Clock.systemDefaultZone());
+    }
+
+    TaskList(BufferedReader reader, PrintWriter writer, TaskListService taskListService, Clock clock) {
         this.in = reader;
         this.out = writer;
         this.taskListService = taskListService;
+        this.clock = clock;
     }
 
     public void run() {
@@ -88,6 +95,9 @@ public final class TaskList implements Runnable {
                 break;
             case "view-by-deadline":
                 viewByDeadline();
+                break;
+            case "today":
+                today();
                 break;
             default:
                 error(command);
@@ -204,6 +214,18 @@ public final class TaskList implements Runnable {
         }
     }
 
+    private void today() {
+        LocalDate today = LocalDate.now(clock);
+        List<Task> tasksDueToday = taskListService.getTasksDueOn(today);
+
+        if (tasksDueToday.isEmpty()) {
+            out.println("No tasks due today.");
+            return;
+        }
+
+        printDeadlineGroup("Today", tasksDueToday);
+    }
+
     private void printDeadlineGroup(String title, List<Task> tasks) {
         out.printf("%s:%n", title);
 
@@ -221,6 +243,7 @@ public final class TaskList implements Runnable {
         out.println("  uncheck <task ID>");
         out.println("  deadline <task ID> <date>");
         out.println("  view-by-deadline");
+        out.println("  today");
         out.println();
     }
 
