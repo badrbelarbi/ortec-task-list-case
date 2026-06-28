@@ -53,4 +53,4 @@ Optional:
 ### P5 - Optional features
 
 * [x] Add `today` command
-* [ ] Group deadline view by project
+* [x] Group deadline view by project

@@ -41,27 +41,6 @@ deadline 1 25-11-2024
 
 Tasks without a deadline are still valid. In the deadline overview, they are shown at the end under a `No deadline` block.
 
-### Deadline overview
-
-The command:
-
-```text
-view-by-deadline
-```
-
-shows tasks grouped by deadline. Deadline groups are sorted chronologically. Tasks without a deadline are shown last.
-
-Example output:
-
-```text
-11-11-2021:
-       3: Interaction-Driven Design
-13-11-2021:
-       1: Eat more donuts.
-No deadline:
-       2: Refactor the codebase
-```
-
 ### Tasks due today
 
 The command:
@@ -70,14 +49,18 @@ The command:
 today
 ```
 
-shows tasks with a deadline equal to the current date.
+shows the same kind of data as the `show` command, but only for tasks that have a deadline equal to the current date.
+
+Projects without tasks due today are not printed.
 
 Example output:
 
 ```text
-Today:
-       1: Pay bills
-       3: Submit assignment
+secrets
+    [ ] 1: Pay bills
+
+training
+    [x] 3: Submit assignment
 ```
 
 If no tasks are due today, the command prints:
@@ -87,6 +70,30 @@ No tasks due today.
 ```
 
 The command uses the application clock, which makes the behavior testable with a fixed date in automated tests.
+
+### Deadline overview
+
+The command:
+
+```text
+view-by-deadline
+```
+
+shows tasks grouped by deadline. Deadline groups are sorted chronologically. Inside each deadline group, tasks are grouped by project. Tasks without a deadline are shown last.
+
+Example output:
+
+```text
+11-11-2021:
+    training:
+       3: Interaction-Driven Design
+13-11-2021:
+    secrets:
+       1: Eat more donuts.
+No deadline:
+    secrets:
+       2: Refactor the codebase
+```
 
 ## REST API
 
@@ -150,6 +157,12 @@ In this implementation, `projectId` refers to the project name, because the orig
 PUT /projects/{projectId}/tasks/{taskId}?deadline=25-11-2024
 ```
 
+REST request dates for setting a deadline use this format:
+
+```text
+dd-MM-yyyy
+```
+
 REST responses use the standard JSON date format:
 
 ```text
@@ -173,6 +186,8 @@ Example response:
 GET /projects/view_by_deadline
 ```
 
+This endpoint returns tasks grouped by deadline and then by project. Tasks without a deadline are returned separately under `projectsWithoutDeadline`.
+
 Example response:
 
 ```json
@@ -180,22 +195,32 @@ Example response:
   "deadlineGroups": [
     {
       "deadline": "2024-11-25",
-      "tasks": [
+      "projects": [
         {
-          "id": 1,
-          "description": "Eat more donuts.",
-          "done": false,
-          "deadline": "2024-11-25"
+          "name": "secrets",
+          "tasks": [
+            {
+              "id": 1,
+              "description": "Eat more donuts.",
+              "done": false,
+              "deadline": "2024-11-25"
+            }
+          ]
         }
       ]
     }
   ],
-  "tasksWithoutDeadline": [
+  "projectsWithoutDeadline": [
     {
-      "id": 2,
-      "description": "Refactor the codebase",
-      "done": false,
-      "deadline": null
+      "name": "training",
+      "tasks": [
+        {
+          "id": 2,
+          "description": "Refactor the codebase",
+          "done": false,
+          "deadline": null
+        }
+      ]
     }
   ]
 }
@@ -213,8 +238,8 @@ This keeps the console application focused on parsing commands and printing outp
 * creating tasks
 * checking and unchecking tasks
 * setting deadlines
-* finding tasks due on a specific date
-* grouping tasks by deadline
+* finding projects with tasks due on a specific date
+* grouping tasks by deadline and project
 
 This also allows the REST controller to reuse the same core logic instead of duplicating behavior.
 
@@ -248,7 +273,8 @@ The implementation was split into small steps:
 6. Required REST endpoints
 7. Optional REST endpoints
 8. Today command
-9. Tests and documentation updates
+9. Deadline views grouped by project
+10. Tests and documentation updates
 
 ## Testing
 
@@ -257,6 +283,7 @@ The solution includes tests for:
 * task deadline behavior
 * console command behavior
 * deadline grouping and ordering
+* grouping deadline views by project
 * tasks due today
 * service-level task list logic
 * required REST endpoints
