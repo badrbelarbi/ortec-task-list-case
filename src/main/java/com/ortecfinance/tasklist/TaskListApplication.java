@@ -13,7 +13,7 @@ public class TaskListApplication {
         }
         else {
             SpringApplication.run(TaskListApplication.class, args);
-            System.out.println("localhost:8080/tasks");
+            System.out.println("REST API available at http://localhost:8080/projects");
         }
     }
 
